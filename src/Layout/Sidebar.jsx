@@ -48,54 +48,17 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </NavLink>
               </li>
 
-              <li>
-                <a className="nav-link">
-                  <AiOutlineSafety className="sidebar-icon" />
-                  Company Certifications
-                </a>
-              </li>
+               
 
-              <li>
-                <a className="nav-link">
-                  <GrCertificate className="sidebar-icon" />
-                  Sample Certifications
-                </a>
-              </li>
+               
 
-              <li>
-                <a className="nav-link">
-                  <AiOutlineSafety className="sidebar-icon" />
-                  Individual Trainee
-                </a>
-              </li>
+               
 
-              <li>
-                <a className="nav-link">
-                  <TbScanEye className="sidebar-icon" />
-                  1st Surveillance Audits
-                </a>
-              </li>
+               
 
-              <li>
-                <a className="nav-link">
-                  <TbScanEye className="sidebar-icon" />
-                  2nd Surveillance Audits
-                </a>
-              </li>
+               
 
-              <li>
-                <a className="nav-link">
-                  <GoShieldX className="sidebar-icon" />
-                  Expired Certifications
-                </a>
-              </li>
-
-              <li>
-                <a className="nav-link">
-                  <TbRefresh className="sidebar-icon" />
-                  Renewal Certifications
-                </a>
-              </li>
+               
 
               <li>
                 <a className="nav-link">
