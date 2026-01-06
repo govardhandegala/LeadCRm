@@ -1,280 +1,273 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import "./products.css";
 import { Modal } from "react-bootstrap";
 import { message, Spin } from "antd";
-import { AiOutlineEye, AiOutlineDownload, AiOutlineDelete } from "react-icons/ai";
+import {
+  AiOutlineEye,
+  AiOutlineDownload,
+  AiOutlineDelete,
+} from "react-icons/ai";
 import { MdOutlineFileUpload } from "react-icons/md";
 import Instance from "../../AxiosConfig";
 
-const AddProducts = ({ show, handleClose, fetchProducts }) => {
+const AddProducts = ({ show, handleClose, addProductOptimistically }) => {
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [imageUrl, setImageUrl] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
-  const [modalImageSrc, setModalImageSrc] = useState(null);
+const [modalImageSrc, setModalImageSrc] = useState(null);
 
+const handleClosePreview = () => {
+  if (modalImageSrc && !modalImageSrc.startsWith("http")) {
+    URL.revokeObjectURL(modalImageSrc);
+  }
+  setModalImageSrc(null);
+  setShowModal(false);
+};
+
+
+  // 🔹 ADD PRODUCT
   const addProducts = async () => {
+    if (!title || !price || !description || !category) {
+      message.warning("Please fill all fields");
+      return;
+    }
+
     try {
       setLoading(true);
+
+      const imagePreview =
+        uploadedFiles.length > 0
+          ? URL.createObjectURL(uploadedFiles[0].file)
+          : "https://i.pravatar.cc/300";
+
       const response = await Instance.post("/products", {
         title,
         price: Number(price),
         description,
         category,
-        image: imageUrl,
+        image: imagePreview, // 👈 local preview URL
       });
-       console.log("addig product",response);
-       
-      if (response.status === 200 || response.status === 201) {
-        message.success("New Product added successfully!");
-        handleClose();
 
-        setTitle("");
-        setPrice("");
-        setCategory("");
-        setDescription("");
-        setUploadedFiles([]);
-        setImageUrl(null);
+      console.log("adding product", response);
+
+      if (response.status === 200 || response.status === 201) {
+        message.success("Product added successfully!");
+
+        // 🔥 Persist locally + show in table
+        addProductOptimistically(response.data);
+
+        resetForm();
+        handleClose();
       }
     } catch (error) {
-      console.error("Error adding product:", error);
+      console.error(error);
       message.error("Failed to add product");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      addFiles(files);
-      setImageUrl(URL.createObjectURL(files[0]));
-    }
+  const resetForm = () => {
+    setTitle("");
+    setPrice("");
+    setDescription("");
+    setCategory("");
+    setUploadedFiles([]);
   };
 
-  const addFiles = (files) => {
-    const newFiles = files.map((file) => ({
-      name: file.name,
-      size: (file.size / 1024).toFixed(1) + " Kb",
-      date: new Date().toLocaleDateString(),
-      file: file,
-    }));
-    setUploadedFiles((prev) => [...prev, ...newFiles]);
-  };
+  // 🔹 FILE HANDLING (UI ONLY)
+ const handleFileChange = (e) => {
+  const files = Array.from(e.target.files);
+  const newFiles = files.map((file) => ({
+    name: file.name,
+    size: (file.size / 1024).toFixed(1) + " Kb",
+    date: new Date().toLocaleDateString(),
+    file,
+  }));
+  setUploadedFiles((prev) => [...prev, ...newFiles]);
+};
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files);
-    addFiles(files);
-  };
 
-  const handleDragOver = (e) => e.preventDefault();
+const handleDrop = (e) => {
+  e.preventDefault();
+  const files = Array.from(e.dataTransfer.files);
+  handleFileChange({ target: { files } });
+};
 
-  const handleClosePreview = () => {
-    if (modalImageSrc) URL.revokeObjectURL(modalImageSrc);
-    setShowModal(false);
-    setModalImageSrc(null);
-  };
+const handleDragOver = (e) => e.preventDefault();
+
 
   return (
     <>
-      {/* MAIN ADD PRODUCT MODAL */}
+      {/* ADD PRODUCT MODAL */}
       <Modal
         show={show}
         onHide={handleClose}
         size="lg"
         centered
         backdrop="static"
-        dialogClassName="custom-agent-modal"
       >
         <Modal.Header closeButton>
           <Modal.Title>Add New Product</Modal.Title>
         </Modal.Header>
 
         <Modal.Body>
-          <form>
-            <div className="container-fluid">
-              <div className="row">
-                <div className="col-md-12 mb-3">
-                  <label className="form-label">Title</label>
+          <div className="container-fluid">
+            <div className="row">
+              {/* TITLE */}
+              <div className="col-md-12 mb-3">
+                <label className="form-label">Title</label>
+                <input
+                  className="form-control"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter title"
+                />
+              </div>
+
+              {/* PRICE */}
+              <div className="col-md-12 mb-3">
+                <label className="form-label">Price</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="Enter price"
+                />
+              </div>
+
+              {/* DESCRIPTION */}
+              <div className="col-md-12 mb-3">
+                <label className="form-label">Description</label>
+                <textarea
+                  rows={4}
+                  className="form-control"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+
+              {/* CATEGORY */}
+              <div className="col-md-12 mb-3">
+                <label className="form-label">Category</label>
+                <input
+                  className="form-control"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="electronics / men's clothing"
+                />
+              </div>
+
+              {/* IMAGE UPLOAD (UI ONLY) */}
+              <div className="col-md-12 mb-3">
+                <label className="form-label">Image</label>
+                <div className="upload-box">
                   <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="form-control"
-                    placeholder="Enter title"
+                    type="file"
+                    multiple
+                    onChange={handleFileChange}
+                    style={{ display: "none" }}
+                    id="uploadInput"
                   />
-                </div>
-
-                <div className="col-md-12 mb-3">
-                  <label className="form-label">Price</label>
-                  <input
-                    type="number"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="form-control"
-                    placeholder="Enter price"
-                  />
-                </div>
-
-                <div className="col-lg-12 mt-3">
-                  <label className="input-label form-label">Description</label>
-                  <textarea
-                    className="input-placeholder form-control"
-                    placeholder="Description..."
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </div>
-
-                <div className="col-md-12 mb-3">
-                  <label className="form-label">Category</label>
-                  <input
-                    type="text"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="form-control"
-                    placeholder="Enter category"
-                  />
-                </div>
-
-                <div className="attachment-upload mt-4">
-                  <label className="input-label form-label">Image</label>
-                  <div
-                    className="upload-box"
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
+                  <p
+                    onClick={() =>
+                      document.getElementById("uploadInput").click()
+                    }
                   >
-                    <input
-                      id="fileInput"
-                      type="file"
-                      multiple
-                      onChange={handleFileChange}
-                      style={{ display: "none" }}
-                    />
-                    <p
-                      className="upload-text"
-                      onClick={() => document.getElementById("fileInput").click()}
-                    >
-                      Drag and Drop Attachment here or{" "}
-                      <span className="upload-link">click to Upload</span>{" "}
-                      <span className="upload-icon">
-                        <MdOutlineFileUpload />
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* FILE DETAILS TABLE */}
-                {uploadedFiles.length > 0 && (
-                  <div className="table-responsive">
-                    <table className="file-table">
-                      <thead>
-                        <tr>
-                          <th>File Name</th>
-                          <th>Size</th>
-                          <th>Date</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {uploadedFiles.map((file, index) => (
-                          <tr key={index}>
-                            <td>{file.name}</td>
-                            <td>{file.size}</td>
-                            <td>{file.date}</td>
-                            <td className="file-actions">
-                              {/* VIEW FILE */}
-                              <AiOutlineEye
-                                className="action-icon"
-                                onClick={() => {
-                                  const fileURL = URL.createObjectURL(file.file);
-                                  setModalImageSrc(fileURL);
-                                  setShowModal(true);
-                                }}
-                              />
-                              {/* DOWNLOAD FILE */}
-                              <AiOutlineDownload
-                                className="action-icon"
-                                onClick={() => {
-                                  const url = URL.createObjectURL(file.file);
-                                  const link = document.createElement("a");
-                                  link.href = url;
-                                  link.download = file.name;
-                                  document.body.appendChild(link);
-                                  link.click();
-                                  document.body.removeChild(link);
-                                  URL.revokeObjectURL(url);
-                                }}
-                              />
-                              {/* DELETE FILE */}
-                              <AiOutlineDelete
-                                className="action-icon"
-                                onClick={() =>
-                                  setUploadedFiles((prev) =>
-                                    prev.filter((_, i) => i !== index)
-                                  )
-                                }
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                <div className="d-flex justify-content-end gap-2 mt-3">
-                  <button
-                    type="button"
-                    className="discard-btn"
-                    onClick={handleClose}
-                  >
-                    Discard
-                  </button>
-                  <button
-                    type="button"
-                    className="save-btn d-flex align-items-center justify-content-center"
-                    onClick={addProducts}
-                    disabled={loading}
-                    style={{ minWidth: "100px" }}
-                  >
-                    {loading ? (
-                      <>
-                        <Spin size="small" /> &nbsp;Saving...
-                      </>
-                    ) : (
-                      "Save"
-                    )}
-                  </button>
+                    Drag & Drop or <span>Click to Upload</span>
+                    <MdOutlineFileUpload />
+                  </p>
                 </div>
               </div>
+
+              {/* FILE TABLE */}
+              {uploadedFiles.length > 0 && (
+                <table className="file-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Size</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uploadedFiles.map((file, index) => (
+                      <tr key={index}>
+                        <td>{file.name}</td>
+                        <td>{file.size}</td>
+                        <td>{file.date}</td>
+                        <td>
+                          <AiOutlineEye
+  className="action-icon"
+  onClick={() => {
+    const fileURL = file.url
+      ? file.url
+      : URL.createObjectURL(file.file);
+
+    setModalImageSrc(fileURL);
+    setShowModal(true);
+  }}
+/>
+
+                          <AiOutlineDelete
+                            onClick={() =>
+                              setUploadedFiles((prev) =>
+                                prev.filter((_, i) => i !== index)
+                              )
+                            }
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {/* ACTION BUTTONS */}
+              <div className="d-flex justify-content-end gap-2 mt-4">
+                <button className="discard-btn" onClick={handleClose}>
+                  Cancel
+                </button>
+                <button
+                  className="save-btn"
+                  onClick={addProducts}
+                  disabled={loading}
+                >
+                  {loading ? <Spin size="small" /> : "Save"}
+                </button>
+              </div>
             </div>
-          </form>
+          </div>
         </Modal.Body>
       </Modal>
 
-      {/* IMAGE PREVIEW MODAL */}
+      {/* IMAGE PREVIEW */}
       <Modal show={showModal} onHide={handleClosePreview} centered size="md">
-        <Modal.Header closeButton>
-          <Modal.Title>Image Preview</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="text-center">
-          {modalImageSrc && (
-            <img
-              src={modalImageSrc}
-              alt="Preview"
-              style={{ maxWidth: "100%", maxHeight: "400px", objectFit: "contain" }}
-            />
-          )}
-        </Modal.Body>
-      </Modal>
+  <Modal.Header closeButton>
+    <Modal.Title>Image Preview</Modal.Title>
+  </Modal.Header>
+  <Modal.Body className="text-center">
+    {modalImageSrc && (
+      <img
+        src={modalImageSrc}
+        alt="Preview"
+        style={{
+          maxWidth: "100%",
+          maxHeight: "400px",
+          objectFit: "contain",
+        }}
+      />
+    )}
+  </Modal.Body>
+</Modal>
+
     </>
   );
 };

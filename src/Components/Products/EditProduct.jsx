@@ -10,7 +10,13 @@ import {
 import { MdOutlineFileUpload } from "react-icons/md";
 import Instance from "../../AxiosConfig";
 
-const EditProduct = ({ show, handleClose, productData, fetchProducts }) => {
+const EditProduct = ({
+  show,
+  handleClose,
+  productData,
+  fetchProducts,
+  updateProductOptimistically,
+}) => {
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
@@ -110,43 +116,67 @@ const EditProduct = ({ show, handleClose, productData, fetchProducts }) => {
   };
 
   const updateProduct = async () => {
-    if (!productData?.id) return message.error("Product ID missing");
+  if (!productData?.id) return message.error("Product ID missing");
 
-    try {
-      setLoading(true);
+  const updatedImage =
+  uploadedFiles.length > 0
+    ? uploadedFiles[uploadedFiles.length - 1].file
+      ? URL.createObjectURL(uploadedFiles[uploadedFiles.length - 1].file)
+      : uploadedFiles[uploadedFiles.length - 1].url
+    : productData.image;
 
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("price", price);
-      formData.append("description", description);
-      formData.append("category", category);
+const updatedProduct = {
+  ...productData,
+  title,
+  price: Number(price),
+  description,
+  category,
+  image: updatedImage, // 🔥 image now updates correctly
+};
 
-      // Only append the file if a new file is uploaded
-      const file = uploadedFiles.find((f) => f.file)?.file;
-      if (file) {
-        formData.append("image", file); // backend expects "image" field
-      }
 
-      const response = await Instance.put(
-        `/products/${productData.id}`,
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-      console.log("product edited",response)
-      if (response.status === 200 || response.status === 201) {
-        message.success("Product updated successfully!");
-        handleClose();
-        fetchProducts();
-      }
-    } catch (error) {
-      console.error(error);
-      message.error("Failed to update product details.");
-    } finally {
-      setLoading(false);
+  // ✅ LOCAL PRODUCT → UPDATE LOCAL STORAGE
+  if (productData.isLocal) {
+    updateProductOptimistically(updatedProduct);
+    message.success("Product updated successfully!");
+    handleClose();
+    return;
+  }
+
+  // 🌐 API PRODUCT → KEEP EXISTING API LOGIC
+  try {
+    setLoading(true);
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("price", price);
+    formData.append("description", description);
+    formData.append("category", category);
+
+    const file = uploadedFiles.find((f) => f.file)?.file;
+    if (file) {
+      formData.append("image", file);
     }
-  };
+
+    const response = await Instance.put(
+      `/products/${productData.id}`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+
+    if (response.status === 200 || response.status === 201) {
+      message.success("Product updated successfully!");
+      handleClose();
+      fetchProducts();
+    }
+  } catch (error) {
+    console.error(error);
+    message.error("Failed to update product details.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <>
