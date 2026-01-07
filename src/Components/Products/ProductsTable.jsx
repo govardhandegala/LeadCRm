@@ -274,6 +274,7 @@ const updateProductOptimistically = (updatedProduct) => {
           columns={columns}
           dataSource={fetchData}
           loading={loading}
+          scroll={{ x: "max-content" }}
           pagination={{
             pageSize: itemsPerPage,
             current: currentPage,
